@@ -2,7 +2,6 @@ name: Android debug build
 on:
   workflow_dispatch:
   push:
-  pull_request:
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -14,17 +13,18 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - uses: android-actions/setup-android@v3
-      - name: Install Android SDK
-        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - name: Configure Android SDK
+        run: |
+          echo "ANDROID_HOME=${ANDROID_HOME:-/usr/local/lib/android/sdk}" >> "$GITHUB_ENV"
+          sdkmanager --install "platforms;android-35" "build-tools;35.0.0"
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.10.2'
       - name: Compile debug APK
         run: gradle --no-daemon --stacktrace :app:assembleDebug
-      - name: Confirm APK exists
-        run: test -s app/build/outputs/apk/debug/app-debug.apk
       - uses: actions/upload-artifact@v4
+        if: success()
         with:
           name: accounting-local-debug-apk
           path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
